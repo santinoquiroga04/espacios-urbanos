@@ -1,8 +1,10 @@
+//Espacios urbanos
 class EspacioUrbano {
     var property valuacion
     const property superficie 
     const property nombre
     const property tieneVallado 
+    const property trabajosRealizados = [] 
 
     method esGrande () {
         self.superficie() > 50 and
@@ -81,24 +83,21 @@ class Multiespacio inherits EspacioUrbano{
     }
 }
 
+// Trabajador y Profesion
 class Trabajador {
     var property profesion 
 }
 
-class Profesion {
-    var property costoPorHora  
 
-    method trabajoHeavy (espacioUrbano){
-        costoPorHora > 10000
+object cerrajero {
+    var property costoPorHora = 100
+
+    method puedeRealizarlo(espacioUrbano) {
+        !espacioUrbano.tieneVallado()
     }
-}
-object cerrajero inherits Profesion (costoPorHora = 2500) {
 
-    method trabajarEspacio(espacioUrbano) {
-        if (!espacioUrbano.tieneVallado()) 
-            throw new DomainException(message = "El espacio urbano ya tiene vallado")
-        else 
-            espacioUrbano.colocarVallado()
+    method realizarTabajo (espacioUrbano) {
+        espacioUrbano.colocarVallado()
     }
 
     method duracionTrabajo (espacioUrbano) {
@@ -107,19 +106,16 @@ object cerrajero inherits Profesion (costoPorHora = 2500) {
         else 
             return 3
     }
-
-    override method trabajoHeavy (espacioUrbano){
-        super(espacioUrbano) or self.duracionTrabajo(espacioUrbano) > 5
-    }
 }
 
-object jardinero inherits Profesion (costoPorHora = 2500){
-    
-    method trabajarEspacio(espacioUrbano) {
-        if (!espacioUrbano.espacioVerde()) 
-            throw new DomainException(message = "El espacio urbano no es un espacio verde")
-        else 
-            espacioUrbano.mejorarPasto()
+object jardinero{
+    var property costoPorHora = 2500
+    method puedeRealizarlo(espacioUrbano) {
+        espacioUrbano.espacioVerde()
+    }
+
+    method realizarTabajo (espacioUrbano) {
+        espacioUrbano.mejorarPasto()
     }
 
     method duracionTrabajo (espacioUrbano) {
@@ -127,13 +123,14 @@ object jardinero inherits Profesion (costoPorHora = 2500){
     }
 }
 
-object encargado inherits Profesion (costoPorHora = 100){
+object encargado {
+    var property costoPorHora = 100
+    method puedeRealizarlo(espacioUrbano) {
+        espacioUrbano.espacioLimpiable()
+    }
 
-    method trabajarEspacio(espacioUrbano) {
-        if (!espacioUrbano.espacioLimpiable()) 
-            throw new DomainException(message = "El espacio urbano no es limpiable")
-        else 
-            espacioUrbano.limpiar()
+    method realizarTabajo (espacioUrbano) {
+        espacioUrbano.limpiar()
     }
 
     method duracionTrabajo () {
@@ -151,21 +148,20 @@ object calendarioPosta {
 }
 
 class Trabajo {
-    var property fecha = calendarioPosta.hoy()
-    var property duracion
+    var property fecha
+    var property duracion 
     const property trabajador
     const property espacioUrbano
     var property costo 
 
     method realizarTrabajo () {
-        trabajador.trabajarEspacio(espacioUrbano)
-    }
-
-    method calcularDuracion () {
-        duracion = trabajador.duracionTrabajo(espacioUrbano)
-    }
-    method calcularCosto () {
+        if(!trabajador.puedeRealizarlo(espacioUrbano))
+            throw new DomainException (message = "El trabajador no puede realizar el trabajo")
+        trabajador.realizarTabajo(espacioUrbano)
         costo = trabajador.costoPorHora() * duracion
+        duracion = trabajador.duracionTrabajo(espacioUrbano)
+        fecha = calendarioPosta.hoy()
+        espacioUrbano.trabajosRealizados().add(self)
     }
 
     method esHeavy () {
