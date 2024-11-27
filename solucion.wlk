@@ -4,7 +4,7 @@ class EspacioUrbano {
     const property superficie 
     const property nombre
     var property tieneVallado  
-    const property trabajosHeavies = []
+    const property trabajos = []
 
     method esGrande() =
         superficie > 50 and
@@ -30,10 +30,10 @@ class EspacioUrbano {
     }
 
     method agregarTrabajo(trabajo) {
-        trabajosHeavies.add(trabajo)
+        trabajos.add(trabajo)
     }
 
-    method esDeUsoIntensivo() = trabajosHeavies.size() > 5
+    method esDeUsoIntensivo() = trabajos.any { trabajo => trabajo.esHeavy() and trabajo.esDelUltimoMes() } > 5
 }
 
 class Plaza inherits EspacioUrbano {
@@ -81,8 +81,6 @@ class Trabajador {
     var property profesion 
     method costoPorHora () = profesion.costoPorHora()
 
-    method puedeTrabajar(espacioUrbano) = profesion.puedeTrabajar(espacioUrbano)
-
     method realizarTrabajo(espacioUrbano) {
         profesion.realizarTrabajo(espacioUrbano)
     }
@@ -92,45 +90,42 @@ class Trabajador {
     method trabajoHeavy() = profesion.trabajoHeavy() 
 }
 
-class Profesion {
-    var property costoPorHora 
-    method trabajoHeavy(espacioUrbano) = costoPorHora > 10000
-}
-object cerrajero inherits Profesion (costoPorHora = 100) {
-    method puedeTrabajar(espacioUrbano) = 
-    if(espacioUrbano.tieneVallado())
-        throw new DomainException(message = "Ya tiene vallado") 
-    
 
+object cerrajero {
+    var property costoPorHora = 100  
+    
     method realizarTrabajo(espacioUrbano){
+        if(espacioUrbano.tieneVallado()){
+            throw new DomainException(message = "Ya tiene vallado") 
+        }
         espacioUrbano.vallar()
     }
 
     method duracionTrabajo(espacioUrbano) = if(espacioUrbano.esGrande()) 5 else 3
-
-    override method trabajoHeavy(espacioUrbano) = super(espacioUrbano) or self.duracionTrabajo(espacioUrbano) > 5
+    method trabajoHeavy(espacioUrbano) = costoPorHora > 10000 or self.duracionTrabajo(espacioUrbano) > 5
 }
 
-object jardinero inherits Profesion (costoPorHora = 2500) {
-
-    method puedeTrabajar(espacioUrbano) = 
-    if(!espacioUrbano.esVerde()) 
-        throw new DomainException(message = "No es verde")
+object jardinero {
+    var property costoPorHora = 2500
     
     method realizarTrabajo(espacioUrbano){
+        if(!espacioUrbano.esVerde()){
+            throw new DomainException(message = "No es verde")
+        } 
         espacioUrbano.mejorarCesped()
     }
 
     method duracionTrabajo(espacioUrbano) = espacioUrbano.superficie() / 10
+
+    method trabajoHeavy(espacioUrbano) = costoPorHora > 10000
 }
 
-object encargado inherits Profesion (costoPorHora = 100){
-
-    method puedeTrabajar(espacioUrbano) = 
-    if(!espacioUrbano.esLimpiable()) 
-        throw new DomainException(message = "No se puede limpiar")
-    
+object encargado{
+    var property costoPorHora = 100
     method realizarTrabajo(espacioUrbano){
+        if(!espacioUrbano.esLimpiable()){
+            throw new DomainException(message = "No se puede limpiar")
+        }
         espacioUrbano.limpiar()
     }
 
@@ -140,24 +135,21 @@ object encargado inherits Profesion (costoPorHora = 100){
 // Punto 3: Trabajos
 
 object calendario {
-    method hoy() = new Date()
+    const property hoy = new Date()
+    const property haceUnMes = hoy.minusMonths(1) 
 }
 class Trabajo {
     var property fecha = calendario.hoy() 
     method validarTrabajo(trabajador, espacioUrbano) = trabajador.puedeTrabajar(espacioUrbano)
 
     method realizarTrabajo (trabajador, espacioUrbano) {
-        //Falta validar trabajo
         trabajador.realizarTrabajo(espacioUrbano) 
-        self.trabajoHeavy(trabajador, espacioUrbano)
+        espacioUrbano.agregarTrabajo(self)
     }
 
     method duracionTrabajo(trabajador, espacioUrbano) = trabajador.duracionTrabajo(espacioUrbano)
-    method costoTrabajo (trabajador) = trabajador.costoPorHora()
-
-    method trabajoHeavy(trabajador,espacioUrbano) {
-        if(trabajador.trabajoHeavy())
-            espacioUrbano.agregarTrabajo(self)
-    }
+    method esDelUltimoMes() = fecha > calendario.haceUnMes()
+    method esHeavy(trabajador, espacioUrbano) = trabajador.trabajoHeavy(espacioUrbano)
+    method costoTrabajo (trabajador,espacioUrbano) = trabajador.costoPorHora() * self.duracionTrabajo(trabajador, espacioUrbano)
 }
 
